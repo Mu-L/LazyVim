@@ -8,16 +8,45 @@ pick = function()
     local project = require("project_nvim.project")
     local history = require("project_nvim.utils.history")
     local results = history.get_recent_projects()
-    local actions = require("fzf-lua.actions")
+    local utils = require("fzf-lua.utils")
 
-    fzf_lua.fzf_exec(results, {
+    local function hl_validate(hl)
+      return not utils.is_hl_cleared(hl) and hl or nil
+    end
+
+    local function ansi_from_hl(hl, s)
+      return utils.ansi_from_hl(hl_validate(hl), s)
+    end
+
+    local opts = {
+      fzf_opts = {
+        ["--header"] = string.format(
+          ":: <%s> to %s | <%s> to %s | <%s> to %s | <%s> to %s | <%s> to %s",
+          ansi_from_hl("FzfLuaHeaderBind", "ctrl-t"),
+          ansi_from_hl("FzfLuaHeaderText", "tabedit"),
+          ansi_from_hl("FzfLuaHeaderBind", "ctrl-s"),
+          ansi_from_hl("FzfLuaHeaderText", "live_grep"),
+          ansi_from_hl("FzfLuaHeaderBind", "ctrl-r"),
+          ansi_from_hl("FzfLuaHeaderText", "oldfiles"),
+          ansi_from_hl("FzfLuaHeaderBind", "ctrl-w"),
+          ansi_from_hl("FzfLuaHeaderText", "change_dir"),
+          ansi_from_hl("FzfLuaHeaderBind", "ctrl-d"),
+          ansi_from_hl("FzfLuaHeaderText", "delete")
+        ),
+      },
+      fzf_colors = true,
       actions = {
         ["default"] = {
           function(selected)
             fzf_lua.files({ cwd = selected[1] })
           end,
         },
-        ["ctrl-t"] = actions.file_tabedit,
+        ["ctrl-t"] = {
+          function(selected)
+            vim.cmd("tabedit")
+            fzf_lua.files({ cwd = selected[1] })
+          end,
+        },
         ["ctrl-s"] = {
           function(selected)
             fzf_lua.live_grep({ cwd = selected[1] })
@@ -47,7 +76,9 @@ pick = function()
           pick()
         end,
       },
-    })
+    }
+
+    fzf_lua.fzf_exec(results, opts)
   end
 end
 
